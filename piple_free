@@ -1,0 +1,45 @@
+# Use R
+language: r
+sudo: false
+cache: packages
+warnings_are_errors: false
+
+env:
+  global:
+    - BIOC_USE_DEVEL="FALSE"  ## Use the current release version
+    - _R_CHECK_FORCE_SUGGESTS_="FALSE"  ## Some suggested packages not
+                                        ## available for r-oldrel
+
+r:
+ - oldrel
+ - release
+ - devel
+
+addons:
+  apt:
+    packages:
+      - libnlopt-dev
+
+install:
+  - R -e 'install.packages("devtools")'
+  - R -e 'devtools::install_deps(dependencies = TRUE)'
+  - R -e 'devtools::install_version("flexmix", "2.3-13")'
+  # catch package installation issues sooner rather than later
+  - R -e 'devtools::install_github("hms-dbmi/scde")'
+
+# do not build vignettes...takes too long and times out on travis
+script:
+  - R CMD build --no-build-vignettes --no-manual .
+  - R CMD check --no-build-vignettes --no-manual --timings *tar.gz
+
+# we need to install BiocInstaller for testing Bioconductor packages
+bioc_required: true
+
+# only report coverage for the release version
+after_success:
+  - test $TRAVIS_R_VERSION_STRING = 'release' && Rscript -e 'covr::codecov()'
+  
+notifications:
+  email:
+    on_success: change
+    on_failure: change
